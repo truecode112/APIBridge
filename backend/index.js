@@ -2,9 +2,9 @@ import express from 'express';
 import pkg from 'body-parser';
 import cors from 'cors';
 import axios from 'axios';
-import convert from 'xml-js';
-import xml2js from 'xml2js';
+import soap1 from 'strong-soap';
 
+var soap = soap1.soap;
 const { json } = pkg;
 
 const app = express();
@@ -13,7 +13,7 @@ const port = 3479;
 app.use(json());
 app.use(cors());
 
-app.post('/getCallInfo', async (req, res) => {
+app.get('/getCallInfo', async (req, res) => {
   console.log(" getCallInfo >>> ", req.body);
   var startDate = req.body.startDate;
   var endDate = req.body.endDate;
@@ -42,18 +42,13 @@ app.post('/getCallInfo', async (req, res) => {
       }
     });
 
-    //console.log(' >>> resp >>>', convert.xml2json(resp.data));
-    var xmldata = convert.xml2json(resp.data);
-    const result = XMLValidator.validate(xmldata);
-    if (result) {
-      console.log('XML valid');
-    }
-    const parser = new XMLParser();
-    const json = parser.parse(xmldata);
-    console.log('>>> json >>> ', json);
-    return res
-      .status(200)
-      .json({ result: resp.data });
+    var XMLHandler = soap.XMLHandler;
+    var xmlHandler = new XMLHandler();
+    var xmldata = resp.data;
+
+    return res.status(200).json({
+      result: xmlHandler.xmlToJson(null, xmldata, null)
+    });
   } catch (err) {
     console.log(err);
     return res
