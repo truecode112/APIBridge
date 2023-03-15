@@ -27,3 +27,5 @@ yarn-error.log*
 /backend/node_modules
 /backend/yarn.lock
 /*.env
+backend/apibridge.db
+/backend/scratch
