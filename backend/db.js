@@ -76,7 +76,7 @@ export const getAllEntries = () => {
 export const insertEntry = (jobId, jobNumber, jobStatus, callNumber, callStatus, mfgId, fssCallId, firstName, lastName, address1, address2, state, country, city, zipcode, email, desc, callCreatedOn) => {
   return new Promise((resolve, reject) => {
     const db = createDbConnection();
-    db.run(`INSERT INTO Entries (JobId, JobNumber, JobStatus, MfgId, FSSCallId, CallNumber, CallStatus, FirstName, LastName, Address1, Address2, State, Country, City, ZipCode, Email, Description, CallCreatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    db.run(`INSERT INTO Entries (JobId, JobNumber, JobStatus, CallNumber, CallStatus, MfgId, FSSCallId, FirstName, LastName, Address1, Address2, State, Country, City, ZipCode, Email, Description, CallCreatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [jobId, jobNumber, jobStatus, callNumber, callStatus, mfgId, fssCallId, firstName, lastName, address1, address2, state, country, city, zipcode, email, desc, callCreatedOn],
       function(error) {
         if (error) {
@@ -101,11 +101,11 @@ export const updateCallStatus = (callNumber, callStatus) => {
   })
 }
 
-export const updateJobStatus = (jobNumber, jobStatus, jobUpdatedAt) => {
+export const updateJobStatus = (jobId, jobStatus, jobUpdatedAt) => {
   return new Promise((resolve, reject) => {
     const db = createDbConnection();
-    db.run(`UPDATE Entries SET JobStatus = ?, JobUpdatedAt = ? WHERE JobNumber = ?`,
-      [jobStatus, jobUpdatedAt, jobNumber]),
+    db.run(`UPDATE Entries SET JobStatus = ?, JobUpdatedAt = ? WHERE JobId = ?`,
+      [jobStatus, jobUpdatedAt, jobId]),
       function(error) {
         if (error) {
           return reject(error);

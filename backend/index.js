@@ -4,12 +4,12 @@ import cors from 'cors';
 import axios from 'axios';
 import soap1 from 'strong-soap';
 import { getEntry, insertEntry, updateCallStatus, updateJobStatus, getAllEntries, updateJobInfo } from './db.js';
-import cron from 'node-cron';import * as path from 'path';
+import cron from 'node-cron'; import * as path from 'path';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import dotenv from 'dotenv';
-dotenv.config({path:path.resolve(__dirname, './.env')});
+dotenv.config({ path: path.resolve(__dirname, './.env') });
 import { LocalStorage } from "node-localstorage";
 
 const localStorage = new LocalStorage('./scratch');
@@ -53,8 +53,47 @@ const getCallInfo = async (startDate, endDate, callNo) => {
     var xmlHandler = new XMLHandler();
     var xmldata = resp.data;
     var jsonData = xmlHandler.xmlToJson(null, xmldata, null);
-    //console.log('>>> Response >>> ', jsonData);
+    console.log('>>> Response >>> ', jsonData);
     return jsonData.Body.getCallInfoResponce;
+  } catch (err) {
+    console.log(err);
+    return null;
+  }
+}
+
+const updateSPCallStatus = async (entry, newCallStatus) => {
+  try {
+    const url = 'https://fssstag.servicepower.com/sms/services/SPDService';
+    const bodyxml = `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:SPDServicerService">
+            <soapenv:Header/>
+            <soapenv:Body>
+              <urn:updateCallInfoObj>
+                  <UserInfo>
+                    <UserID>AAA46246</UserID>
+                    <Password>sptest</Password>
+                    <SvcrAcct>AAA46246</SvcrAcct>
+                  </UserInfo>
+                  <CallNumber>${entry.CallNumber}</CallNumber>
+                  <MfgId>${entry.MfgId}</MfgId>
+                  <FSSCallId>${entry.FSSCallId}</FSSCallId>
+                  <CallStatus>${newCallStatus}</CallStatus>
+              </urn:updateCallInfoObj>
+            </soapenv:Body>
+        </soapenv:Envelope>`;
+
+    var resp = await axios.post(url, bodyxml, {
+      headers: {
+        'SOAPAction': '#POST',
+        'Content-Type': 'text/xml;charset=UTF-8'
+      }
+    });
+
+    var XMLHandler = soap.XMLHandler;
+    var xmlHandler = new XMLHandler();
+    var xmldata = resp.data;
+    var jsonData = xmlHandler.xmlToJson(null, xmldata, null);
+    console.log('>>> Response >>> ', jsonData);
+    return jsonData.Body.getResponseInfo9;
   } catch (err) {
     console.log(err);
     return null;
@@ -75,9 +114,9 @@ const getAccessToken = async () => {
   try {
     const url = 'https://api.servicefusion.com/oauth/access_token';
     const data = {
-      grant_type : 'client_credentials',
-      client_id : process.env.SERVICEFUSION_CLIENT_ID,
-      client_secret : process.env.SERVICEFUSION_CLIENT_SECRET
+      grant_type: 'client_credentials',
+      client_id: process.env.SERVICEFUSION_CLIENT_ID,
+      client_secret: process.env.SERVICEFUSION_CLIENT_SECRET
     };
 
     var resp = await axios.post(url, data, {
@@ -98,8 +137,8 @@ const refreshAccessToken = async (refresh_token) => {
   try {
     const url = 'https://api.servicefusion.com/oauth/access_token';
     const data = {
-      grant_type : 'refresh_token',
-      refresh_token : refresh_token
+      grant_type: 'refresh_token',
+      refresh_token: refresh_token
     };
 
     var resp = await axios.post(url, data, {
@@ -130,8 +169,8 @@ const checkAccessToken = async () => {
     var resp = await axios.get(url, {
       headers: {
         'Content-Type': 'application/json',
-        Authorization : 'Bearer ' + access_token,
-        Accept : 'application/json'
+        Authorization: 'Bearer ' + access_token,
+        Accept: 'application/json'
       }
     });
 
@@ -142,7 +181,7 @@ const checkAccessToken = async () => {
     console.log('>>> checkAccessToken error >>> ', err);
     if (err.response.data.code == 401) {
       //unauthorized, so refresh token
-      console.log(' >>> Invalid credential. so refresh token')  ;
+      console.log(' >>> Invalid credential. so refresh token');
       var refresh_token = localStorage.getItem('refresh-token');
       refresh_token = await refreshAccessToken(refresh_token)
       localStorage.setItem('access-token', refresh_token.access_token);
@@ -151,7 +190,7 @@ const checkAccessToken = async () => {
     } else {
       console.log(' >>> checkAccessToken Error >>>', err);
     }
-    
+
     return null;
   }
 }
@@ -186,8 +225,8 @@ const createSFJob = async (entry) => {
     var resp = await axios.post(url, data, {
       headers: {
         'Content-Type': 'application/json',
-        Authorization : 'Bearer ' + access_token,
-        Accept : 'application/json'
+        Authorization: 'Bearer ' + access_token,
+        Accept: 'application/json'
       }
     });
 
@@ -213,8 +252,8 @@ const getCustomer = async (firstname, lastname) => {
       },
       headers: {
         'Content-Type': 'application/json',
-        Authorization : 'Bearer ' + access_token,
-        Accept : 'application/json'
+        Authorization: 'Bearer ' + access_token,
+        Accept: 'application/json'
       }
     });
 
@@ -235,7 +274,7 @@ const createCustomer = async (entry) => {
 
     var data = {
       customer_name: entry.FirstName + " " + entry.LastName,
-      contacts : [{
+      contacts: [{
         fname: entry.FirstName,
         lname: entry.LastName,
         emails: [{
@@ -256,8 +295,8 @@ const createCustomer = async (entry) => {
     var resp = await axios.post(url, data, {
       headers: {
         'Content-Type': 'application/json',
-        Authorization : 'Bearer ' + access_token,
-        Accept : 'application/json'
+        Authorization: 'Bearer ' + access_token,
+        Accept: 'application/json'
       }
     });
 
@@ -299,24 +338,30 @@ const getCallInfoData = async () => {
   var startDate = new Date();
   var endDate = startDate;
   endDate.setDate(endDate.getDate() - 7);
-  startDate = '20230225';
-  endDate = '20230301';
+  startDate = '20230222';
+  endDate = '20230223';
   try {
     var callInfoData = await getCallInfo(startDate, endDate, "");
     var callDatas = [];
     if (callInfoData != null && callInfoData.ErrorInfo == null) {
-      callDatas.push(callInfoData.CallInfo);
-      console.log('>>> CallDatas >>> ', callDatas);
+      if (callInfoData.numberOfCalls == 1) {
+        callDatas.push(callInfoData.CallInfo);
+      } else {
+        callDatas = callInfoData.CallInfo;
+      }
+
+      console.log('>>> Found new Call >>> ', callDatas);
     }
-  
+
     if (callDatas.length > 0) {
       callDatas.forEach(async (callData) => {
         //console.log('>>> CallData >>>', callData);
         if (callData.CallStatus == "OPEN") {
           // New Call
+          console.log('>>> CallData >>>', callData.CallStatus);
           var entry = await getEntry("", callData.CallNumber);
           if (entry == undefined) {
-            var insertId = await insertEntry(0, "", "", callData.CallNumber, callData.CallStatus, 
+            var insertId = await insertEntry(0, "", "", callData.CallNumber, callData.CallStatus,
               callData.MfgId,
               callData.FSSCallId,
               callData.ConsumerInfo.ConsumerFirstName,
@@ -333,10 +378,10 @@ const getCallInfoData = async () => {
             );
             console.log(' >>> New Call is inserted to DB. ID = ', insertId);
           } else {
-            if (entry.CallStatus != callData.CallStatus) {
+            /*if (entry.CallStatus != callData.CallStatus) {
               updateCallStatus(entry.CallNumber, callData.CallStatus);
               console.log(` >>> Updated Call Status from ${entry.CallStatus} to ${callData.CallStatus} for ${callData.CallNumber}`);
-            }
+            }*/
           }
         } else {
           console.log(" >>> CallStatus >>>", callData.CallStatus);
@@ -360,21 +405,23 @@ const updateJobStatusChange = async (entry) => {
       },
       headers: {
         'Content-Type': 'application/json',
-        Authorization : 'Bearer ' + access_token,
-        Accept : 'application/json'
+        Authorization: 'Bearer ' + access_token,
+        Accept: 'application/json'
       }
     });
 
-    console.log(' >>> updateJobStatusChange >>> ', resp.data);
+    // console.log(' >>> updateJobStatusChange >>> ', resp.data);
     if (entry.JobStatus != resp.data.status) {
-      updateJobStatus(resp.data.check_number, resp.data.status, resp.data.updated_at);
+      updateJobStatus(entry.JobId, resp.data.status, resp.data.updated_at);
       console.log(` >>> Job Status updated in DB from ${entry.JobStatus} to ${resp.data.status} for ${resp.data.check_number} `);
+      entry.JobStatus = resp.data.status;
+      return resp.data.status;
+    } else {
+      return null;
     }
-    return true;
-
   } catch (err) {
     console.log(' >>> updateJobStatusChange Error >>>', err);
-    return false;
+    return null;
   }
 }
 
@@ -386,9 +433,37 @@ const test = async () => {
     if (entries.length > 0) {
       entries.forEach(async (entry) => {
         //console.log('>>> CallData >>>', callData);
-        var isUpdated = await updateJobStatusChange(entry);
-        if (isUpdated) {
+        var updatedStatus = await updateJobStatusChange(entry);
+        var newCallStatus = "";
+        if (updatedStatus != null) {
+          if (updatedStatus == "Scheduled" || updatedStatus == "Confirmed >") {
+            newCallStatus = "ACCEPTED";
+          } else if (updatedStatus == "Completed >") {
+            newCallStatus = "COMPLETED";
+          } else if (updatedStatus == "Canceled >") {
+            newCallStatus = "CANCELED";
+          } else if (updatedStatus == "PI - Scheduled") {
+            newCallStatus = "RESCHEDULED";
+          } else if (updatedStatus == "REJECTED") {
 
+          }
+
+          var updateResult = await updateSPCallStatus(entry, newCallStatus);
+          if (updateResult.erroroccurred == 'N') {
+            //Updated Success
+            console.log(`>>> Call Status updated from ${entry.CallStatus} to ${newCallStatus} for ${entry.CallNumber}`);
+            await updateCallStatus(entry.CallNumber, newCallStatus);
+          } else {
+            console.log(`>>> Call Status update failed. ${updateResult.ackmessage} `);
+          }
+        }
+
+        var callClaim = await getCallInfo("", "", entry.CallNumber);
+        if (callClaim != null && callClaim.ErrorInfo == null) {
+          if (callClaim.CallStatus == "CLAIMED") {
+            await updateCallStatus(entry.CallNumber, callClaim.CallStatus);
+            
+          }
         }
       });
     }
